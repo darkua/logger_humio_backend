@@ -23,7 +23,7 @@ defmodule LoggerSplunkBackend.Mixfile do
   defp deps do
     [
       {:httpoison, "~> 1.0"},
-      {:poison, "~> 3.1"}
+      {:poison, "~> 4.0"}
     ]
   end
 
@@ -37,9 +37,9 @@ defmodule LoggerSplunkBackend.Mixfile do
   defp package do
     [
       files: ["config", "lib", "mix.exs", "README*", "LICENSE*"],
-      maintainers: ["Sysdia Solutions"],
+      maintainers: ["Andreas Kasprzok"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/sysdia-solutions/logger_splunk_backend"}
+      links: %{"GitHub" => "https://github.com/akasprzok/logger_splunk_backend"}
     ]
   end
 end
