@@ -25,6 +25,7 @@ defmodule Logger.Backend.Splunk do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
       log_event(level, msg, ts, md, state)
     end
+
     {:ok, state}
   end
 
@@ -33,8 +34,9 @@ defmodule Logger.Backend.Splunk do
     # ignored
     {:ok, state}
   end
+
   def handle_info(message, state) do
-    Logger.warn(fn -> "#{__MODULE__} unhandled message: #{inspect message}" end)
+    Logger.warn(fn -> "#{__MODULE__} unhandled message: #{inspect(message)}" end)
     {:ok, state}
   end
 
@@ -46,10 +48,10 @@ defmodule Logger.Backend.Splunk do
 
   defp format_message(msg, level, ts, md, state) do
     msg
-    |> IO.chardata_to_string
+    |> IO.chardata_to_string()
     |> String.split("\n")
     |> filter_empty_strings
-    |> Enum.map(&(format_event(level, &1, ts, md, state)))
+    |> Enum.map(&format_event(level, &1, ts, md, state))
     |> Enum.join("")
   end
 
@@ -70,9 +72,10 @@ defmodule Logger.Backend.Splunk do
     Enum.reduce(keys, [], fn key, acc ->
       case Keyword.fetch(metadata, key) do
         {:ok, val} -> [{key, val} | acc]
-        :error     -> acc
+        :error -> acc
       end
-    end) |> Enum.reverse()
+    end)
+    |> Enum.reverse()
   end
 
   defp configure(name, opts) do
@@ -84,7 +87,7 @@ defmodule Logger.Backend.Splunk do
     host = Keyword.get(opts, :host)
     level = Keyword.get(opts, :level, :debug)
     metadata = Keyword.get(opts, :metadata, [])
-    format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile
+    format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
 
     %{
       name: name,
@@ -100,6 +103,7 @@ defmodule Logger.Backend.Splunk do
   defp token({:system, envvar}) do
     System.get_env(envvar)
   end
+
   defp token(binary) when is_binary(binary) do
     binary
   end

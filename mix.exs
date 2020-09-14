@@ -6,8 +6,8 @@ defmodule LoggerSplunkBackend.Mixfile do
       app: :logger_splunk_backend,
       version: "0.0.1",
       elixir: "~> 1.0",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
       deps: deps()
@@ -22,8 +22,8 @@ defmodule LoggerSplunkBackend.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 1.0"},
-      {:poison, "~> 3.1"}
+      {:tesla, "~> 1.3.0"},
+      {:jason, "~> 1.1"}
     ]
   end
 
@@ -37,9 +37,9 @@ defmodule LoggerSplunkBackend.Mixfile do
   defp package do
     [
       files: ["config", "lib", "mix.exs", "README*", "LICENSE*"],
-      maintainers: ["Sysdia Solutions"],
+      maintainers: ["Andreas Kasprzok"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/sysdia-solutions/logger_splunk_backend"}
+      links: %{"GitHub" => "https://github.com/akasprzok/logger_splunk_backend"}
     ]
   end
 end

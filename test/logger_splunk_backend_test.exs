@@ -27,18 +27,20 @@ defmodule Logger.Backend.Splunk.Test do
   require Logger
 
   @backend {Logger.Backend.Splunk, :test}
-  Logger.add_backend @backend
+  Logger.add_backend(@backend)
 
   setup do
-    config([
+    config(
       connector: Output.Test,
       host: 'splunk.url',
       format: "[$level] $message\n",
       token: "<<splunk-token>>"
-    ])
-    on_exit fn ->
+    )
+
+    on_exit(fn ->
       connector().destroy()
-    end
+    end)
+
     :ok
   end
 
@@ -61,14 +63,14 @@ defmodule Logger.Backend.Splunk.Test do
   end
 
   test "can configure format" do
-    config format: "$message ($level)\n"
+    config(format: "$message ($level)\n")
 
     Logger.info("I am formatted")
     assert read_log() == "I am formatted (info)\n"
   end
 
   test "can configure metadata" do
-    config format: "$metadata$message\n", metadata: [:user_id, :auth]
+    config(format: "$metadata$message\n", metadata: [:user_id, :auth])
 
     Logger.info("hello")
     assert read_log() == "hello\n"
@@ -82,7 +84,7 @@ defmodule Logger.Backend.Splunk.Test do
   end
 
   test "can handle multi-line messages" do
-    config format: "$metadata$message\n", metadata: [:user_id, :auth]
+    config(format: "$metadata$message\n", metadata: [:user_id, :auth])
     Logger.metadata(auth: true)
     Logger.info("hello\n world")
     assert read_log() == "auth=true hello\nauth=true  world\n"
