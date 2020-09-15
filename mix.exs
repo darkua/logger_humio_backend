@@ -22,8 +22,7 @@ defmodule LoggerSplunkBackend.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 1.0"},
-      {:poison, "~> 3.1"}
+      {:tesla, "~> 1.3.0"}
     ]
   end
 
