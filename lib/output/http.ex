@@ -5,20 +5,16 @@ defmodule Logger.Backend.Splunk.Output.Http do
       {"Content-Type", "application/json"}
     ]
 
-
-    {:ok, msg} = Jason.encode(
-      [
+    {:ok, msg} =
+      Jason.encode([
         %{
           "fields" => %{
             "host" => "webhost1"
           },
           "messages" => [entry]
         }
-      ]
-    )
+      ])
 
-    case Tesla.post(host, msg, headers: headers) do
-      {:ok, %{status: status} = response} when status not in 200..299 -> IO.inspect(response)
-    end
+    {:ok, _response} = Tesla.post(host, msg, headers: headers)
   end
 end
