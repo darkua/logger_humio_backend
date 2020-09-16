@@ -1,4 +1,4 @@
-defmodule Logger.Backend.Splunk do
+defmodule Logger.Backend.Humio do
   @behaviour :gen_event
 
   @default_format "[$level] $message\n"
@@ -83,7 +83,7 @@ defmodule Logger.Backend.Splunk do
     opts = Keyword.merge(env, opts)
     Application.put_env(:logger, name, opts)
 
-    connector = Keyword.get(opts, :connector, Logger.Backend.Splunk.Output.Http)
+    connector = Keyword.get(opts, :connector, Logger.Backend.Humio.Output.Http)
     host = Keyword.get(opts, :host)
     level = Keyword.get(opts, :level, :debug)
     metadata = Keyword.get(opts, :metadata, [])

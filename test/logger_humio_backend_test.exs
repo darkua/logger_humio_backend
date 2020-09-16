@@ -22,11 +22,11 @@ defmodule Output.Test do
   end
 end
 
-defmodule Logger.Backend.Splunk.Test do
+defmodule Logger.Backend.Humio.Test do
   use ExUnit.Case, async: false
   require Logger
 
-  @backend {Logger.Backend.Splunk, :test}
+  @backend {Logger.Backend.Humio, :test}
   Logger.add_backend(@backend)
 
   setup do

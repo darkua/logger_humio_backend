@@ -1,4 +1,4 @@
-defmodule Logger.Backend.Splunk.Output.Http do
+defmodule Logger.Backend.Humio.Output.Http do
   def transmit(entry, host, token) do
     headers = [
       {"Authorization", "Bearer #{token}"},

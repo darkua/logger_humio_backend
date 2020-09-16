@@ -1,10 +1,10 @@
-defmodule LoggerSplunkBackend.Mixfile do
+defmodule LoggerHumioBackend.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :logger_splunk_backend,
-      version: "0.0.1",
+      app: :logger_humio_backend,
+      version: "0.0.3",
       elixir: "~> 1.0",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -29,8 +29,7 @@ defmodule LoggerSplunkBackend.Mixfile do
 
   defp description do
     """
-    A Logger backend to support the Splunk service
-    (splunk.com) TCP input log mechanism
+    A Logger backend to support the Humio (humio.com) TCP input log mechanism
     """
   end
 
@@ -39,7 +38,7 @@ defmodule LoggerSplunkBackend.Mixfile do
       files: ["config", "lib", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Andreas Kasprzok"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/akasprzok/logger_splunk_backend"}
+      links: %{"GitHub" => "https://github.com/akasprzok/logger_humio_backend"}
     ]
   end
 end
