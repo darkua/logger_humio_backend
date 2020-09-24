@@ -1,4 +1,7 @@
 defmodule Logger.Backend.Humio.Client.Test do
+  @moduledoc """
+  Test client for the backend.  Writes the body to @logfile and provides convenience methods for writing back logged lines and cleaning up the created file.
+  """
   @behaviour Logger.Backend.Humio.Client
 
   @logfile "test_log.log"

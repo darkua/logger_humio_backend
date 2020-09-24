@@ -1,4 +1,10 @@
 defmodule Logger.Backend.Humio.IngestApi.Hec do
+  @moduledoc """
+  Ingest API implementation for Humio's HTTP Event Collector API.
+  If your goal is to migrate from Splunk to Humio, this is likely the simplest option for you.
+
+  [Humio Documentation]: https://docs.humio.com/integrations/ingest-logs-with-a-data-shipper/hec/
+  """
   @behaviour Logger.Backend.Humio.IngestApi
 
   @path "/api/v1/ingest/hec"

@@ -23,7 +23,8 @@ defmodule LoggerHumioBackend.Mixfile do
   defp deps do
     [
       {:tesla, "~> 1.3.0"},
-      {:jason, "~> 1.1"}
+      {:jason, "~> 1.1"},
+      {:credo, "~> 1.5.0-rc.2", only: [:dev, :test], runtime: false}
     ]
   end
 

@@ -1,4 +1,7 @@
 defmodule Logger.Backend.Humio do
+  @moduledoc """
+  A Genserver that receives calls and events from Elixir when configured as a logger.
+  """
   @behaviour :gen_event
 
   @default_format "[$level] $message\n"
