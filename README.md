@@ -33,7 +33,7 @@ Then run mix deps.get to install it.
 ```elixir
 Logger.add_backend {Logger.Backend.Humio, :debug}
 Logger.configure {Logger.Backend.Humio, :debug},
-  host: 'https://humio-ingest.bigcorp.com:443/api/v1/ingest/humio-unstructured',
+  host: 'https://humio-ingest.bigcorp.com:443',
   token: "ingest-token-goes-here",
   level: :debug,
   format: "[$level] $message\n"

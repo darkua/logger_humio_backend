@@ -16,8 +16,8 @@ defmodule Logger.Backend.Humio do
   end
 
   @impl true
-  def handle_call(:connector, %{connector: connector} = state) do
-    {:ok, {:ok, connector}, state}
+  def handle_call(:ingest_api, %{ingest_api: ingest_api} = state) do
+    {:ok, {:ok, ingest_api}, state}
   end
 
   @impl true
@@ -26,6 +26,12 @@ defmodule Logger.Backend.Humio do
       log_event(level, msg, ts, md, state)
     end
 
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_event(:flush, state) do
+    # TODO: implement when introducing batching
     {:ok, state}
   end
 
@@ -40,10 +46,10 @@ defmodule Logger.Backend.Humio do
     {:ok, state}
   end
 
-  defp log_event(level, msg, ts, md, %{connector: connector, host: host, token: token} = state) do
+  defp log_event(level, msg, ts, md, state) do
     msg
     |> format_message(level, ts, md, state)
-    |> transmit(connector, host, token)
+    |> transmit(state)
   end
 
   defp format_message(msg, level, ts, md, state) do
@@ -64,8 +70,10 @@ defmodule Logger.Backend.Humio do
     |> Enum.reject(&(String.trim(&1) == ""))
   end
 
-  defp transmit(entry, connector, host, token) do
-    connector.transmit(entry, host, token)
+  defp transmit(msg, %{ingest_api: ingest_api} = state) do
+    state
+    |> Map.put_new(:entries, [msg])
+    |> ingest_api.transmit()
   end
 
   defp take_metadata(metadata, keys) do
@@ -83,7 +91,8 @@ defmodule Logger.Backend.Humio do
     opts = Keyword.merge(env, opts)
     Application.put_env(:logger, name, opts)
 
-    connector = Keyword.get(opts, :connector, Logger.Backend.Humio.Output.Http)
+    ingest_api = Keyword.get(opts, :ingest_api, Logger.Backend.Humio.Output.Unstructured)
+    client = Keyword.get(opts, :client, Logger.Backend.Humio.Client.Tesla)
     host = Keyword.get(opts, :host)
     level = Keyword.get(opts, :level, :debug)
     metadata = Keyword.get(opts, :metadata, [])
@@ -91,7 +100,8 @@ defmodule Logger.Backend.Humio do
 
     %{
       name: name,
-      connector: connector,
+      ingest_api: ingest_api,
+      client: client,
       host: host,
       level: level,
       format: format,

@@ -1,27 +1,3 @@
-defmodule Output.Test do
-  @logfile "test_log.log"
-
-  def transmit(message, _host, _token) do
-    File.write!(@logfile, message)
-  end
-
-  def read() do
-    if exists() do
-      File.read!(@logfile)
-    end
-  end
-
-  def exists() do
-    File.exists?(@logfile)
-  end
-
-  def destroy() do
-    if exists() do
-      File.rm!(@logfile)
-    end
-  end
-end
-
 defmodule Logger.Backend.Humio.Test do
   use ExUnit.Case, async: false
   require Logger
@@ -31,14 +7,14 @@ defmodule Logger.Backend.Humio.Test do
 
   setup do
     config(
-      connector: Output.Test,
-      host: 'splunk.url',
+      ingest_api: Logger.Backend.Humio.IngestApi.Test,
+      host: 'humio.url',
       format: "[$level] $message\n",
-      token: "<<splunk-token>>"
+      token: "<<humio-token>>"
     )
 
     on_exit(fn ->
-      connector().destroy()
+      ingest_api().destroy()
     end)
 
     :ok
@@ -51,14 +27,14 @@ defmodule Logger.Backend.Humio.Test do
   test "does not log when level is under minimum Logger level" do
     config(level: :info)
     Logger.debug("do not log me")
-    refute connector().exists()
+    refute ingest_api().exists()
   end
 
   test "does log when level is above or equal minimum Logger level" do
-    refute connector().exists()
+    refute ingest_api().exists()
     config(level: :info)
     Logger.warn("you will log me")
-    assert connector().exists()
+    assert ingest_api().exists()
     assert read_log() == "[warn] you will log me\n"
   end
 
@@ -101,12 +77,12 @@ defmodule Logger.Backend.Humio.Test do
     Logger.configure_backend(@backend, opts)
   end
 
-  defp connector() do
-    {:ok, connector} = :gen_event.call(Logger, @backend, :connector)
-    connector
+  defp ingest_api() do
+    {:ok, ingest_api} = :gen_event.call(Logger, @backend, :ingest_api)
+    ingest_api
   end
 
   defp read_log() do
-    connector().read()
+    ingest_api().read()
   end
 end
