@@ -6,6 +6,13 @@ defmodule LoggerHumioBackend.Mixfile do
       app: :logger_humio_backend,
       version: "0.0.3",
       elixir: "~> 1.0",
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       description: description(),
@@ -24,7 +31,8 @@ defmodule LoggerHumioBackend.Mixfile do
     [
       {:tesla, "~> 1.3.0"},
       {:jason, "~> 1.1"},
-      {:credo, "~> 1.5.0-rc.2", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.5.0-rc.2", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
