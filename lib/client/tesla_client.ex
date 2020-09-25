@@ -23,7 +23,8 @@ defmodule Logger.Backend.Humio.Client.Tesla do
   def client(base_url, headers) do
     middleware = [
       {Tesla.Middleware.BaseUrl, base_url},
-      {Tesla.Middleware.Headers, headers}
+      {Tesla.Middleware.Headers, headers},
+      {Tesla.Middleware.Compression, format: "gzip"}
     ]
 
     Tesla.client(middleware)
