@@ -9,5 +9,5 @@ defmodule Logger.Backend.Humio.Client do
                 body: String.t(),
                 headers: list(tuple)
               }
-            ) :: {:ok, response :: map()} | {:error, reason :: any())}
+            ) :: {:ok, response :: map()} | {:error, reason :: any()}
 end

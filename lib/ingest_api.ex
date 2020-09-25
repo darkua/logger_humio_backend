@@ -10,5 +10,5 @@ defmodule Logger.Backend.Humio.IngestApi do
                 token: String.t(),
                 client: Logger.Backend.Humio.Client
               }
-            ) :: {:ok, response :: map()} | {:error, reason :: any())}
+            ) :: {:ok, response :: map()} | {:error, reason :: any()}
 end

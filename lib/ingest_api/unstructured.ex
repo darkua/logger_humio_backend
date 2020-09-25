@@ -1,4 +1,8 @@
 defmodule Logger.Backend.Humio.IngestApi.Unstructured do
+  @moduledoc """
+  This Ingest API implementation is for Humio's `Unstructured` API.
+  [Humio Documentation]: https://docs.humio.com/api/ingest/#parser
+  """
   @behaviour Logger.Backend.Humio.IngestApi
 
   @path "/api/v1/ingest/humio-unstructured"

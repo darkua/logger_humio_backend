@@ -1,4 +1,9 @@
 defmodule Logger.Backend.Humio.IngestApi.Test do
+  @moduledoc """
+  This Ingest API implementation is designed for testing.
+
+  It writes entries to @logfile contains convenience functions for reading back what was logged and cleaning up the generated file.
+  """
   @behaviour Logger.Backend.Humio.IngestApi
 
   @logfile "test_log.log"
