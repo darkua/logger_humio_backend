@@ -1,34 +1,30 @@
-defmodule Logger.Humio.Backend.Output.HecTest do
+defmodule Logger.Humio.Backend.Output.UnstructuredTest do
   use ExUnit.Case
 
-  alias Logger.Backend.Humio.IngestApi.Hec
-  alias Logger.Backend.Humio.Client.Test
+  alias Logger.Backend.Humio.IngestApi
+  alias Logger.Backend.Humio.Client
 
   @base_url "https://humio-ingest.bigcorp.com:443"
-  @path "/api/v1/ingest/hec"
+  @path "/api/v1/ingest/humio-unstructured"
   @content_type "application/json"
   @token "token"
   @message "message"
 
+  setup do
+    on_exit(fn -> Client.Test.destroy() end)
+  end
+
   test "Send payload successfully" do
-    {:ok, body} =
-      Jason.encode([
-        %{
-          "fields" => %{
-            "host" => "webhost1"
-          },
-          "messages" => [@message]
-        }
-      ])
+    {:ok, body} = Jason.encode([%{"messages" => [@message]}])
 
     headers = [{"Authorization", "Bearer " <> @token}, {"Content-Type", @content_type}]
 
     assert {:ok, %{body: ^body, base_url: @base_url, path: @path, headers: ^headers}} =
-             Hec.transmit(%{
+             IngestApi.Unstructured.transmit(%{
                entries: [@message],
                host: @base_url,
                token: @token,
-               client: Test
+               client: Client.Test
              })
   end
 end
