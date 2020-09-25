@@ -4,7 +4,7 @@ defmodule LoggerHumioBackend.Mixfile do
   def project do
     [
       app: :logger_humio_backend,
-      version: "0.0.3",
+      version: "0.0.4",
       elixir: "~> 1.0",
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
