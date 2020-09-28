@@ -94,7 +94,7 @@ defmodule Logger.Backend.Humio do
     opts = Keyword.merge(env, opts)
     Application.put_env(:logger, name, opts)
 
-    ingest_api = Keyword.get(opts, :ingest_api, Logger.Backend.Humio.Output.Unstructured)
+    ingest_api = Keyword.get(opts, :ingest_api, Logger.Backend.Humio.IngestApi.Unstructured)
     client = Keyword.get(opts, :client, Logger.Backend.Humio.Client.Tesla)
     host = Keyword.get(opts, :host)
     level = Keyword.get(opts, :level, :debug)

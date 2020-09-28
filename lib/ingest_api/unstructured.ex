@@ -8,7 +8,7 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
   @path "/api/v1/ingest/humio-unstructured"
   @content_type "application/json"
 
-  @impl Logger.Backend.Humio.IngestApi
+  @impl true
   def transmit(%{entries: entries, host: host, token: token, client: client}) do
     {:ok, body} = encode_entries(entries)
     headers = generate_headers(token)
@@ -32,9 +32,6 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
   def encode_entries(entries) do
     Jason.encode([
       %{
-        "fields" => %{
-          "host" => "webhost1"
-        },
         "messages" => entries
       }
     ])
