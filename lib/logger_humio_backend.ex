@@ -4,9 +4,26 @@ defmodule Logger.Backend.Humio do
   """
   @behaviour :gen_event
 
-  @default_format "[$level] $message\n"
-
   require Logger
+
+  @default_format "[$level] $message\n"
+  @default_ingest_api Logger.Backend.Humio.IngestApi.Unstructured
+  @default_client Logger.Backend.Humio.Client.Tesla
+  @default_level :debug
+  @default_metadata []
+  @default_max_batch_size 50
+
+  @type log_event :: %{
+          level: atom(),
+          message: String.t(),
+          timestamp: any(),
+          metadata: keyword()
+        }
+  @type log_events :: [log_event]
+  @type state :: %{
+          log_events: log_events,
+          config: map()
+        }
 
   @impl true
   def init({__MODULE__, name}) do
@@ -14,31 +31,35 @@ defmodule Logger.Backend.Humio do
   end
 
   @impl true
-  def handle_call({:configure, opts}, %{name: name}) do
+  def handle_call({:configure, opts}, %{config: %{name: name}}) do
     {:ok, :ok, configure(name, opts)}
   end
 
   @impl true
-  def handle_call(:ingest_api, %{ingest_api: ingest_api} = state) do
+  def handle_call(:ingest_api, %{config: %{ingest_api: ingest_api}} = state) do
     {:ok, {:ok, ingest_api}, state}
   end
 
   @impl true
-  def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
+  @spec handle_event(
+          :flush | {any, any, {Logger, any, Logger.Formatter.time(), keyword()}},
+          state()
+        ) :: {:ok, any}
+  def handle_event({level, _gl, {Logger, msg, ts, md}}, %{config: %{level: min_level}} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      log_event(level, msg, ts, md, state)
+      add_to_batch(%{level: level, message: msg, timestamp: ts, metadata: md}, state)
+    else
+      {:ok, state}
     end
-
-    {:ok, state}
   end
 
   @impl true
   def handle_event(:flush, state) do
-    # TODO: implement when introducing batching
-    {:ok, state}
+    send_events(state)
   end
 
   @impl true
+  @spec handle_info(any, state) :: {:ok, any}
   def handle_info({:io_reply, _ref, :ok}, state) do
     # ignored
     {:ok, state}
@@ -49,18 +70,38 @@ defmodule Logger.Backend.Humio do
     {:ok, state}
   end
 
-  defp log_event(level, msg, ts, md, state) do
-    msg
-    |> format_message(level, ts, md, state)
-    |> transmit(state)
+  def add_to_batch(log_event, %{config: %{max_batch_size: max_batch_size}} = state) do
+    state = Map.put(state, :log_events, [log_event | state.log_events])
+
+    if length(state.log_events) >= max_batch_size do
+      send_events(state)
+    else
+      {:ok, state}
+    end
   end
 
-  defp format_message(msg, level, ts, md, state) do
+  defp send_events(%{log_events: []} = state) do
+    {:ok, state}
+  end
+
+  defp send_events(state) do
+    messages = format_messages(state)
+    transmit(messages, state)
+    {:ok, Map.put(state, :log_events, [])}
+  end
+
+  defp format_messages(%{log_events: log_events, config: config}) do
+    log_events
+    |> Enum.reverse()
+    |> Enum.map(&format_message(&1, config))
+  end
+
+  defp format_message(%{message: msg, level: level, timestamp: ts, metadata: md}, config) do
     msg
     |> IO.chardata_to_string()
     |> String.split("\n")
     |> filter_empty_strings
-    |> Enum.map(&format_event(level, &1, ts, md, state))
+    |> Enum.map(&format_event(level, &1, ts, md, config))
     |> Enum.join("")
   end
 
@@ -73,9 +114,17 @@ defmodule Logger.Backend.Humio do
     |> Enum.reject(&(String.trim(&1) == ""))
   end
 
-  defp transmit(msg, %{ingest_api: ingest_api} = state) do
-    state
-    |> Map.put_new(:entries, [msg])
+  @spec transmit(messages :: nonempty_list(String.t()), state()) ::
+          {:ok, response :: map()} | {:error, reason :: any()}
+  defp transmit(messages, %{
+         config: %{ingest_api: ingest_api, host: host, token: token, client: client}
+       }) do
+    %{
+      entries: messages,
+      host: host,
+      token: token,
+      client: client
+    }
     |> ingest_api.transmit()
   end
 
@@ -94,22 +143,29 @@ defmodule Logger.Backend.Humio do
     opts = Keyword.merge(env, opts)
     Application.put_env(:logger, name, opts)
 
-    ingest_api = Keyword.get(opts, :ingest_api, Logger.Backend.Humio.IngestApi.Unstructured)
-    client = Keyword.get(opts, :client, Logger.Backend.Humio.Client.Tesla)
-    host = Keyword.get(opts, :host)
-    level = Keyword.get(opts, :level, :debug)
-    metadata = Keyword.get(opts, :metadata, [])
+    host = Keyword.get(opts, :host, "")
+    token = token(Keyword.get(opts, :token, ""))
+
+    ingest_api = Keyword.get(opts, :ingest_api, @default_ingest_api)
+    client = Keyword.get(opts, :client, @default_client)
+    level = Keyword.get(opts, :level, @default_level)
+    metadata = Keyword.get(opts, :metadata, @default_metadata)
     format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
+    max_batch_size = Keyword.get(opts, :max_batch_size, @default_max_batch_size)
 
     %{
-      name: name,
-      ingest_api: ingest_api,
-      client: client,
-      host: host,
-      level: level,
-      format: format,
-      metadata: metadata,
-      token: token(Keyword.get(opts, :token, ""))
+      config: %{
+        token: token,
+        host: host,
+        name: name,
+        ingest_api: ingest_api,
+        client: client,
+        level: level,
+        format: format,
+        metadata: metadata,
+        max_batch_size: max_batch_size
+      },
+      log_events: []
     }
   end
 
