@@ -11,7 +11,9 @@ defmodule Logger.Humio.Backend.Output.UnstructuredTest do
   @message "message"
 
   setup do
-    on_exit(fn -> Client.Test.destroy() end)
+    Client.Test.start_link(self())
+
+    :ok
   end
 
   test "Send payload successfully" do
@@ -19,12 +21,14 @@ defmodule Logger.Humio.Backend.Output.UnstructuredTest do
 
     headers = [{"Authorization", "Bearer " <> @token}, {"Content-Type", @content_type}]
 
-    assert {:ok, %{body: ^body, base_url: @base_url, path: @path, headers: ^headers}} =
-             IngestApi.Unstructured.transmit(%{
-               entries: [@message],
-               host: @base_url,
-               token: @token,
-               client: Client.Test
-             })
+    {:ok, %{status: _status, body: _body}} =
+      IngestApi.Unstructured.transmit(%{
+        entries: [@message],
+        host: @base_url,
+        token: @token,
+        client: Client.Test
+      })
+
+    assert_receive({:send, %{body: ^body, base_url: @base_url, path: @path, headers: ^headers}})
   end
 end

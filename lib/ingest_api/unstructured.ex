@@ -13,13 +13,12 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
     {:ok, body} = encode_entries(entries)
     headers = generate_headers(token)
 
-    {:ok, _response} =
-      client.send(%{
-        base_url: host,
-        path: @path,
-        body: body,
-        headers: headers
-      })
+    client.send(%{
+      base_url: host,
+      path: @path,
+      body: body,
+      headers: headers
+    })
   end
 
   def generate_headers(token) do

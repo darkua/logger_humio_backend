@@ -6,27 +6,26 @@ defmodule Logger.Backend.Humio.IngestApi.Test do
   """
   @behaviour Logger.Backend.Humio.IngestApi
 
-  @logfile "test_log.log"
+  @impl true
+  def transmit(params) do
+    GenServer.cast(__MODULE__, {:transmit, params})
+    {:ok, %{response: 200, body: "great success!"}}
+  end
+
+  use GenServer
+
+  def start_link(pid) do
+    GenServer.start_link(__MODULE__, pid, name: __MODULE__)
+  end
 
   @impl true
-  def transmit(%{entries: entries, host: _host, token: _token, client: _client} = params) do
-    File.write!(@logfile, entries)
-    {:ok, params}
+  def init(pid) do
+    {:ok, %{pid: pid}}
   end
 
-  def read() do
-    if exists() do
-      File.read!(@logfile)
-    end
-  end
-
-  def exists() do
-    File.exists?(@logfile)
-  end
-
-  def destroy() do
-    if exists() do
-      File.rm!(@logfile)
-    end
+  @impl true
+  def handle_cast({:transmit, params}, %{pid: pid} = state) do
+    send(pid, {:transmit, params})
+    {:noreply, state}
   end
 end

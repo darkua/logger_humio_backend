@@ -8,11 +8,11 @@ defmodule Logger.Backend.Humio.Client.Tesla do
   @impl true
   def send(%{base_url: base_url, path: path, body: body, headers: headers}) do
     case Tesla.post(client(base_url, headers), path, body) do
-      {:ok, response} ->
+      {:ok, result} ->
         {:ok,
          %{
-           body: response.body,
-           status: response.status
+           body: result.body,
+           status: result.status
          }}
 
       {:error, reason} ->
