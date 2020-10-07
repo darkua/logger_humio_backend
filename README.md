@@ -52,9 +52,9 @@ Logger.configure {Logger.Backend.Humio, :debug},
 
 ```elixir
 config :logger,
-  backends: [{Logger.Backend.Humio, :error_log}, :console]
+  backends: [{Logger.Backend.Humio, :humio_log}, :console]
 
-config :logger, :error_log,
+config :logger, :humio_log,
   host: "https://humio-ingest.bigcorp.com:443/",
   token: "ingest-token-goes-here",
 ```
