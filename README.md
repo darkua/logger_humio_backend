@@ -28,7 +28,7 @@ To use it in your Mix projects, first add it as a dependency:
 
 ```elixir
 def deps do
-  [{:logger_humio_backend, "~> 0.0.4"}]
+  [{:logger_humio_backend, git: "https://github.com/akasprzok/logger_humio_backend/", tag: "v0.0.5"}]
 end
 ```
 Then run mix deps.get to install it.
