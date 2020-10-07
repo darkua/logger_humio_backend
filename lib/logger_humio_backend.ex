@@ -63,8 +63,19 @@ defmodule Logger.Backend.Humio do
     {:ok, {:ok, ingest_api}, state}
   end
 
+  @doc """
+  Ignore messages where the group leader is in a different node than the one where handler is installed.
+  """
   @impl true
-  def handle_event({level, _gl, {Logger, msg, ts, md}}, %{config: %{level: min_level}} = state) do
+  def handle_event({_level, group_leader, {Logger, _msg, _ts, _md}}, state)
+      when node(group_leader) != node() do
+    {:ok, state}
+  end
+
+  def handle_event(
+        {level, _group_leader, {Logger, msg, ts, md}},
+        %{config: %{level: min_level}} = state
+      ) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
       add_to_batch(%{level: level, message: msg, timestamp: ts, metadata: md}, state)
     else
@@ -72,6 +83,9 @@ defmodule Logger.Backend.Humio do
     end
   end
 
+  @doc """
+  Send batched events when `Logger.flush/0` is called.
+  """
   @impl true
   def handle_event(:flush, state) do
     send_events(state)
@@ -114,7 +128,7 @@ defmodule Logger.Backend.Humio do
   end
 
   @spec add_to_batch(log_event(), state()) :: {:ok, state()}
-  def add_to_batch(log_event, %{config: %{max_batch_size: max_batch_size}} = state) do
+  defp add_to_batch(log_event, %{config: %{max_batch_size: max_batch_size}} = state) do
     state =
       state
       |> Map.put(:log_events, [log_event | state.log_events])
