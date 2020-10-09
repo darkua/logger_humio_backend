@@ -1,34 +1,44 @@
-defmodule Logger.Humio.Backend.Output.UnstructuredTest do
-  use ExUnit.Case
+defmodule Logger.Humio.Backend.IngestApi.UnstructuredTest do
+  use ExUnit.Case, async: true
+  require Logger
 
   alias Logger.Backend.Humio.IngestApi
   alias Logger.Backend.Humio.Client
 
-  @base_url "https://humio-ingest.bigcorp.com:443"
-  @path "/api/v1/ingest/humio-unstructured"
-  @content_type "application/json"
+  @backend {Logger.Backend.Humio, :test}
+  Logger.add_backend(@backend)
+
+  @base_url "humio.url"
   @token "token"
-  @message "message"
+  @path "/api/v1/ingest/humio-unstructured"
+  @headers [{"Authorization", "Bearer " <> @token}, {"Content-Type", "application/json"}]
 
   setup do
-    Client.Test.start_link(self())
+    config(
+      ingest_api: IngestApi.Unstructured,
+      client: Client.Test,
+      host: @base_url,
+      format: "$message",
+      token: @token,
+      max_batch_size: 1
+    )
 
+    Client.Test.start_link(self())
     :ok
   end
 
   test "Send payload successfully" do
-    {:ok, body} = Jason.encode([%{"messages" => [@message]}])
+    message = "message"
+    Logger.info(message)
 
-    headers = [{"Authorization", "Bearer " <> @token}, {"Content-Type", @content_type}]
+    expected_body = Jason.encode!([%{messages: [message]}])
 
-    {:ok, %{status: _status, body: _body}} =
-      IngestApi.Unstructured.transmit(%{
-        entries: [@message],
-        host: @base_url,
-        token: @token,
-        client: Client.Test
-      })
+    assert_receive(
+      {:send, %{body: ^expected_body, base_url: @base_url, path: @path, headers: @headers}}
+    )
+  end
 
-    assert_receive({:send, %{body: ^body, base_url: @base_url, path: @path, headers: ^headers}})
+  defp config(opts) do
+    :ok = Logger.configure_backend(@backend, opts)
   end
 end

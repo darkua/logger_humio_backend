@@ -146,57 +146,30 @@ defmodule Logger.Backend.Humio do
   end
 
   defp send_events(state) do
-    messages = format_messages(state)
-    transmit(messages, state)
+    transmit(state)
     {:ok, %{cancel_timer(state) | log_events: []}}
   end
 
-  defp format_messages(%{log_events: log_events, config: config}) do
-    log_events
-    |> Enum.reverse()
-    |> Enum.map(&format_message(&1, config))
-  end
-
-  defp format_message(%{message: msg, level: level, timestamp: ts, metadata: md}, config) do
-    msg
-    |> IO.chardata_to_string()
-    |> String.split("\n")
-    |> filter_empty_strings
-    |> Enum.map(&format_event(level, &1, ts, md, config))
-    |> Enum.join("")
-  end
-
-  defp format_event(level, msg, ts, md, %{format: format, metadata: keys}) do
-    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, keys))
-  end
-
-  defp filter_empty_strings(strings) do
-    strings
-    |> Enum.reject(&(String.trim(&1) == ""))
-  end
-
-  @spec transmit(messages :: nonempty_list(String.t()), state()) ::
-          {:ok, response :: map()} | {:error, reason :: any()}
-  defp transmit(messages, %{
-         config: %{ingest_api: ingest_api, host: host, token: token, client: client}
+  defp transmit(%{
+         log_events: log_events,
+         config: %{
+           ingest_api: ingest_api,
+           host: host,
+           token: token,
+           client: client,
+           format: format,
+           metadata: metadata
+         }
        }) do
     %{
-      entries: messages,
+      log_events: Enum.reverse(log_events),
       host: host,
       token: token,
-      client: client
+      client: client,
+      format: format,
+      metadata_keys: metadata
     }
     |> ingest_api.transmit()
-  end
-
-  defp take_metadata(metadata, keys) do
-    Enum.reduce(keys, [], fn key, acc ->
-      case Keyword.fetch(metadata, key) do
-        {:ok, val} -> [{key, val} | acc]
-        :error -> acc
-      end
-    end)
-    |> Enum.reverse()
   end
 
   defp configure(name, opts) do
