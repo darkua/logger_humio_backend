@@ -189,7 +189,12 @@ defmodule Logger.Backend.Humio do
     |> ingest_api.transmit()
   end
 
-  defp take_metadata(metadata, keys) do
+  defp take_metadata(metadata, :all) do
+    IO.inspect(metadata)
+    metadata
+  end
+
+  defp take_metadata(metadata, keys) when is_list(keys) do
     Enum.reduce(keys, [], fn key, acc ->
       case Keyword.fetch(metadata, key) do
         {:ok, val} -> [{key, val} | acc]
