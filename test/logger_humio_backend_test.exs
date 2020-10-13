@@ -96,6 +96,14 @@ defmodule Logger.Backend.Humio.Test do
       assert_receive {:transmit, %{entries: ["user_id=13 auth=true hello\n"]}}
     end
 
+    test "can parse :all metadata" do
+      config(format: "$metadata$message\n", metadata: :all)
+      Logger.info("hello")
+      assert_receive {:transmit, %{entries: [entries]}}
+      assert entries =~ "domain=elixir"
+      assert entries =~ "hello"
+    end
+
     test "can handle multi-line messages" do
       config(format: "$metadata$message\n", metadata: [:user_id, :auth])
       Logger.metadata(auth: true)

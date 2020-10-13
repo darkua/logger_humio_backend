@@ -190,7 +190,6 @@ defmodule Logger.Backend.Humio do
   end
 
   defp take_metadata(metadata, :all) do
-    IO.inspect(metadata)
     metadata
   end
 
