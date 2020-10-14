@@ -13,6 +13,7 @@ defmodule Logger.Backend.Humio do
   @default_metadata []
   @default_max_batch_size 20
   @default_flush_interval_ms 10_000
+  @default_utc_offset "+00:00"
 
   @type log_event :: %{
           level: atom(),
@@ -30,7 +31,7 @@ defmodule Logger.Backend.Humio do
             client: Logger.Backend.Humio.Client,
             level: Logger.level(),
             format: any(),
-            metadata: keyword(),
+            metadata: keyword() | :all,
             max_batch_size: pos_integer(),
             flush_interval_ms: pos_integer()
           },
@@ -146,61 +147,32 @@ defmodule Logger.Backend.Humio do
   end
 
   defp send_events(state) do
-    messages = format_messages(state)
-    transmit(messages, state)
+    transmit(state)
     {:ok, %{cancel_timer(state) | log_events: []}}
   end
 
-  defp format_messages(%{log_events: log_events, config: config}) do
-    log_events
-    |> Enum.reverse()
-    |> Enum.map(&format_message(&1, config))
-  end
-
-  defp format_message(%{message: msg, level: level, timestamp: ts, metadata: md}, config) do
-    msg
-    |> IO.chardata_to_string()
-    |> String.split("\n")
-    |> filter_empty_strings
-    |> Enum.map(&format_event(level, &1, ts, md, config))
-    |> Enum.join("")
-  end
-
-  defp format_event(level, msg, ts, md, %{format: format, metadata: keys}) do
-    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, keys))
-  end
-
-  defp filter_empty_strings(strings) do
-    strings
-    |> Enum.reject(&(String.trim(&1) == ""))
-  end
-
-  @spec transmit(messages :: nonempty_list(String.t()), state()) ::
-          {:ok, response :: map()} | {:error, reason :: any()}
-  defp transmit(messages, %{
-         config: %{ingest_api: ingest_api, host: host, token: token, client: client}
+  defp transmit(%{
+         log_events: log_events,
+         config: %{
+           ingest_api: ingest_api,
+           host: host,
+           token: token,
+           client: client,
+           format: format,
+           metadata: metadata,
+           utc_offset: utc_offset
+         }
        }) do
     %{
-      entries: messages,
+      log_events: Enum.reverse(log_events),
       host: host,
       token: token,
-      client: client
+      client: client,
+      format: format,
+      metadata_keys: metadata,
+      utc_offset: utc_offset
     }
     |> ingest_api.transmit()
-  end
-
-  defp take_metadata(metadata, :all) do
-    metadata
-  end
-
-  defp take_metadata(metadata, keys) when is_list(keys) do
-    Enum.reduce(keys, [], fn key, acc ->
-      case Keyword.fetch(metadata, key) do
-        {:ok, val} -> [{key, val} | acc]
-        :error -> acc
-      end
-    end)
-    |> Enum.reverse()
   end
 
   defp configure(name, opts) do
@@ -218,6 +190,7 @@ defmodule Logger.Backend.Humio do
     format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
     max_batch_size = Keyword.get(opts, :max_batch_size, @default_max_batch_size)
     flush_interval_ms = Keyword.get(opts, :flush_interval_ms, @default_flush_interval_ms)
+    utc_offset = Keyword.get(opts, :utc_offset, @default_utc_offset)
 
     %{
       config: %{
@@ -230,7 +203,8 @@ defmodule Logger.Backend.Humio do
         format: format,
         metadata: metadata,
         max_batch_size: max_batch_size,
-        flush_interval_ms: flush_interval_ms
+        flush_interval_ms: flush_interval_ms,
+        utc_offset: utc_offset
       },
       log_events: [],
       flush_timer: nil

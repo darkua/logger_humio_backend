@@ -4,14 +4,23 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
   [Humio Documentation]: https://docs.humio.com/api/ingest/#parser
   """
   @behaviour Logger.Backend.Humio.IngestApi
+  alias Logger.Backend.Humio.IngestApi
 
   @path "/api/v1/ingest/humio-unstructured"
   @content_type "application/json"
 
   @impl true
-  def transmit(%{entries: entries, host: host, token: token, client: client}) do
+  def transmit(%{
+        log_events: log_events,
+        host: host,
+        token: token,
+        client: client,
+        format: format,
+        metadata_keys: metadata_keys
+      }) do
+    entries = format_messages(log_events, format, metadata_keys)
     {:ok, body} = encode_entries(entries)
-    headers = generate_headers(token)
+    headers = IngestApi.generate_headers(token, @content_type)
 
     client.send(%{
       base_url: host,
@@ -21,18 +30,16 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
     })
   end
 
-  def generate_headers(token) do
-    [
-      {"Authorization", "Bearer " <> token},
-      {"Content-Type", @content_type}
-    ]
-  end
-
-  def encode_entries(entries) do
+  defp encode_entries(entries) do
     Jason.encode([
       %{
         "messages" => entries
       }
     ])
+  end
+
+  defp format_messages(log_events, format, metadata_keys) do
+    log_events
+    |> Enum.map(&IngestApi.format_message(&1, format, metadata_keys))
   end
 end
