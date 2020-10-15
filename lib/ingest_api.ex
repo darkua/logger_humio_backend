@@ -17,8 +17,7 @@ defmodule Logger.Backend.Humio.IngestApi do
           token: String.t(),
           client: Logger.Backend.Humio.Client,
           format: any(),
-          metadata_keys: list() | :all,
-          utc_offset: String.t()
+          metadata_keys: list() | :all
         }
   @type result :: {:ok, Client.response()} | {:error, any}
 

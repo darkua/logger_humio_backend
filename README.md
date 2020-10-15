@@ -52,6 +52,7 @@ Logger.configure {Logger.Backend.Humio, :debug},
 
 ```elixir
 config :logger,
+  utc_log: true #recommended, and required for correct ingestion when using the Structured Ingest API
   backends: [{Logger.Backend.Humio, :humio_log}, :console]
 
 config :logger, :humio_log,
@@ -62,6 +63,7 @@ config :logger, :humio_log,
 #### With All Options
 ```elixir
 config :logger,
+  utc_log: true #recommended, and required for correct ingestion when using the Structured Ingest API
   backends: [{Logger.Backend.Humio, :humio_log}, :console]
 
 config :logger, :humio_log,
@@ -75,6 +77,30 @@ config :logger, :humio_log,
   max_batch_size: 50,
   flush_interval_ms: 5_000
 ```
+
+## Ingest APIs
+
+Ingest APIs are configured using the `ingest_api` config option.  They are prefixed with `Logger.Backend.Humio.IngestApi`.  They format logs according to Humio's ingest APIs and then pass the formatted logs to the `Logger.Backend.Humio.Client` to send to Humio.
+
+### Unstructured
+
+Uses Humio's [unstructured ingest API](https://docs.humio.com/api/ingest/#parser).  It functions very closely to the default console backend.  There is not yet support for `fields`.
+
+### Structured
+
+Uses Humio's [structured ingest API](https://docs.humio.com/api/ingest/#structured-data). Logs are formatted as `events`.
+
+Metadata is omitted when formatting the message according to the `format` specified, and instead added as `attributes` key-value pairs.  
+The timestamp is added in the `event`'s `timestamp` field, and can be omitted in the `format` config.
+`Timezone`s inside `events` and `tags` are not yet supported.
+
+## Clients
+
+A Client sends logs formatted by an Ingest API to Humio.  Clients are prefixed with `Logger.Backend.Humio.Client`.
+
+### Tesla
+
+The default (and currently only) client.  Compresses payload using `gzip` and contains sensible retry defaults.
 
 ## Batching
 

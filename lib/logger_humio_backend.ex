@@ -13,7 +13,6 @@ defmodule Logger.Backend.Humio do
   @default_metadata []
   @default_max_batch_size 20
   @default_flush_interval_ms 10_000
-  @default_utc_offset "+00:00"
 
   @type log_event :: %{
           level: atom(),
@@ -159,8 +158,7 @@ defmodule Logger.Backend.Humio do
            token: token,
            client: client,
            format: format,
-           metadata: metadata,
-           utc_offset: utc_offset
+           metadata: metadata
          }
        }) do
     %{
@@ -169,8 +167,7 @@ defmodule Logger.Backend.Humio do
       token: token,
       client: client,
       format: format,
-      metadata_keys: metadata,
-      utc_offset: utc_offset
+      metadata_keys: metadata
     }
     |> ingest_api.transmit()
   end
@@ -190,7 +187,6 @@ defmodule Logger.Backend.Humio do
     format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
     max_batch_size = Keyword.get(opts, :max_batch_size, @default_max_batch_size)
     flush_interval_ms = Keyword.get(opts, :flush_interval_ms, @default_flush_interval_ms)
-    utc_offset = Keyword.get(opts, :utc_offset, @default_utc_offset)
 
     %{
       config: %{
@@ -203,8 +199,7 @@ defmodule Logger.Backend.Humio do
         format: format,
         metadata: metadata,
         max_batch_size: max_batch_size,
-        flush_interval_ms: flush_interval_ms,
-        utc_offset: utc_offset
+        flush_interval_ms: flush_interval_ms
       },
       log_events: [],
       flush_timer: nil
