@@ -3,12 +3,14 @@ defmodule Logger.Backend.Humio.Test do
   Smoke tests for the backend.
   """
   use ExUnit.Case, async: true
-  require Logger
-
   alias Logger.Backend.Humio.IngestApi
+
+  require Logger
 
   @backend {Logger.Backend.Humio, :test}
   Logger.add_backend(@backend)
+
+  @happy_result {:ok, %{status: 200, body: "somebody"}}
 
   ### Setup Functions
 
@@ -21,7 +23,7 @@ defmodule Logger.Backend.Humio.Test do
       max_batch_size: 1
     )
 
-    IngestApi.Test.start_link(self())
+    IngestApi.Test.start_link(%{pid: self(), result: @happy_result})
     :ok
   end
 
@@ -35,7 +37,7 @@ defmodule Logger.Backend.Humio.Test do
       flush_interval_ms: 10_000
     )
 
-    IngestApi.Test.start_link(self())
+    IngestApi.Test.start_link(%{pid: self(), result: @happy_result})
     :ok
   end
 
@@ -52,7 +54,7 @@ defmodule Logger.Backend.Humio.Test do
       flush_interval_ms: flush_interval_ms
     )
 
-    IngestApi.Test.start_link(self())
+    IngestApi.Test.start_link(%{pid: self(), result: @happy_result})
     {:ok, %{flush_interval_ms: flush_interval_ms, max_batch_size: max_batch_size}}
   end
 
@@ -219,6 +221,67 @@ defmodule Logger.Backend.Humio.Test do
         {:transmit, %{log_events: [%{message: "timer is reset"}]}},
         round(flush_interval_ms * 1.2)
       )
+    end
+  end
+
+  describe "failure to send" do
+    test "API or Client returns non-2xx status causes error log" do
+      {:ok, string_io} = StringIO.open("")
+      flush_interval_ms = 100
+
+      config(
+        ingest_api: Logger.Backend.Humio.IngestApi.Test,
+        host: "humio.url",
+        token: "humio-token",
+        flush_interval_ms: flush_interval_ms,
+        debug_io_device: string_io
+      )
+
+      error_message = "oh no spaghettio"
+      unhappy_result = {:ok, %{status: 500, body: error_message}}
+      IngestApi.Test.start_link(%{pid: self(), result: unhappy_result})
+      message = "something important that needs to go to Humio"
+      Logger.warn(message)
+      assert_receive({:transmit, %{}}, round(flush_interval_ms * 2))
+
+      # required since unhappy result needs to be returned to backend from ingest API, which triggers the output to the debug device.
+      # May be improved in future by substituting a mock IO device for StringIO.
+      :timer.sleep(500)
+      {:ok, {_initial_empty_string, error_output}} = StringIO.close(string_io)
+      assert error_output =~ "ERROR"
+      assert error_output =~ "Sending logs to Humio failed."
+      assert error_output =~ "Status: 500"
+      assert error_output =~ message
+      assert error_output =~ error_message
+    end
+
+    test "API or Client returns :error causing error log" do
+      {:ok, string_io} = StringIO.open("")
+      flush_interval_ms = 100
+
+      config(
+        ingest_api: Logger.Backend.Humio.IngestApi.Test,
+        host: "humio.url",
+        token: "humio-token",
+        flush_interval_ms: flush_interval_ms,
+        debug_io_device: string_io
+      )
+
+      reason = "oh no spaghettio"
+      unhappy_result = {:error, reason}
+      IngestApi.Test.start_link(%{pid: self(), result: unhappy_result})
+      message = "something important that needs to go to Humio"
+      Logger.warn(message)
+      assert_receive({:transmit, %{}}, round(flush_interval_ms * 2))
+
+      # required since unhappy result needs to be returned to backend from ingest API, which triggers the output to the debug device.
+      # May be improved in future by substituting a mock IO device for StringIO.
+      :timer.sleep(500)
+      {:ok, {_initial_empty_string, error_output}} = StringIO.close(string_io)
+      assert error_output =~ "ERROR"
+      assert error_output =~ "Sending logs to Humio failed"
+      assert error_output =~ message
+      assert error_output =~ reason
     end
   end
 

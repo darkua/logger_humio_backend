@@ -13,6 +13,7 @@ defmodule Logger.Backend.Humio do
   @default_metadata []
   @default_max_batch_size 20
   @default_flush_interval_ms 10_000
+  @default_debug_io_device :stdio
 
   @type log_event :: %{
           level: atom(),
@@ -32,7 +33,8 @@ defmodule Logger.Backend.Humio do
             format: any(),
             metadata: keyword() | :all,
             max_batch_size: pos_integer(),
-            flush_interval_ms: pos_integer()
+            flush_interval_ms: pos_integer(),
+            debug_io_device: atom() | pid()
           },
           flush_timer: reference()
         }
@@ -145,8 +147,28 @@ defmodule Logger.Backend.Humio do
     {:ok, state}
   end
 
-  defp send_events(state) do
-    transmit(state)
+  defp send_events(%{config: %{debug_io_device: debug_io_device}} = state) do
+    case transmit(%{log_events: log_events} = state) do
+      {:ok, %{status: status, body: body}} when status not in 200..299 ->
+        log(
+          debug_io_device,
+          :error,
+          "Sending logs to Humio failed. Status: #{inspect(status)}, Response Body: #{
+            inspect(body)
+          }, logs: #{inspect(log_events)}"
+        )
+
+      {:error, reason} ->
+        log(
+          debug_io_device,
+          :error,
+          "Sending logs to Humio failed: #{inspect(reason)}, logs: #{inspect(log_events)}"
+        )
+
+      {:ok, _response} ->
+        :ok
+    end
+
     {:ok, %{cancel_timer(state) | log_events: []}}
   end
 
@@ -172,6 +194,15 @@ defmodule Logger.Backend.Humio do
     |> ingest_api.transmit()
   end
 
+  defp log(nil, _level, _message) do
+    false
+  end
+
+  defp log(io_device, level, message) do
+    level = level |> Atom.to_string() |> String.upcase()
+    IO.puts(io_device, [level, ": ", message])
+  end
+
   defp configure(name, opts) do
     env = Application.get_env(:logger, name, [])
     opts = Keyword.merge(env, opts)
@@ -187,6 +218,7 @@ defmodule Logger.Backend.Humio do
     format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
     max_batch_size = Keyword.get(opts, :max_batch_size, @default_max_batch_size)
     flush_interval_ms = Keyword.get(opts, :flush_interval_ms, @default_flush_interval_ms)
+    debug_io_device = Keyword.get(opts, :debug_io_device, @default_debug_io_device)
 
     %{
       config: %{
@@ -199,7 +231,8 @@ defmodule Logger.Backend.Humio do
         format: format,
         metadata: metadata,
         max_batch_size: max_batch_size,
-        flush_interval_ms: flush_interval_ms
+        flush_interval_ms: flush_interval_ms,
+        debug_io_device: debug_io_device
       },
       log_events: [],
       flush_timer: nil

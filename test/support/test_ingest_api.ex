@@ -6,26 +6,30 @@ defmodule Logger.Backend.Humio.IngestApi.Test do
   """
   @behaviour Logger.Backend.Humio.IngestApi
 
+  @type opts :: %{
+          pid: pid(),
+          result: Logger.Backend.Humio.IngestApi.result()
+        }
+
   @impl true
   def transmit(params) do
-    GenServer.cast(__MODULE__, {:transmit, params})
-    {:ok, %{response: 200, body: "great success!"}}
+    GenServer.call(__MODULE__, {:transmit, params})
   end
 
   use GenServer
 
-  def start_link(pid) do
-    GenServer.start_link(__MODULE__, pid, name: __MODULE__)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @impl true
-  def init(pid) do
-    {:ok, %{pid: pid}}
+  def init(opts) do
+    {:ok, opts}
   end
 
   @impl true
-  def handle_cast({:transmit, params}, %{pid: pid} = state) do
+  def handle_call({:transmit, params}, _from, %{pid: pid, result: result} = state) do
     send(pid, {:transmit, params})
-    {:noreply, state}
+    {:reply, result, state}
   end
 end
