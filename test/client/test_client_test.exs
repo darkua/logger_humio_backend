@@ -4,7 +4,7 @@ defmodule Logger.Backend.Humio.Client.TestClientTest do
 
   This serves mainly as an example for how to use the Test Client in other tests.
   """
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Logger.Backend.Humio.Client
 

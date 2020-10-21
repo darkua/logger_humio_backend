@@ -16,9 +16,10 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
         token: token,
         client: client,
         format: format,
+        formatter: formatter,
         metadata_keys: metadata_keys
       }) do
-    entries = format_messages(log_events, format, metadata_keys)
+    entries = format_messages(log_events, format, formatter, metadata_keys)
     {:ok, body} = encode_entries(entries)
     headers = IngestApi.generate_headers(token, @content_type)
 
@@ -38,8 +39,8 @@ defmodule Logger.Backend.Humio.IngestApi.Unstructured do
     ])
   end
 
-  defp format_messages(log_events, format, metadata_keys) do
+  defp format_messages(log_events, format, formatter, metadata_keys) do
     log_events
-    |> Enum.map(&IngestApi.format_message(&1, format, metadata_keys))
+    |> Enum.map(&IngestApi.format_message(&1, format, formatter, metadata_keys))
   end
 end

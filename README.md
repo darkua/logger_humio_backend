@@ -21,6 +21,8 @@ be merged with the metadata sent in every log message.  [default: `[]`]
 * **ingest_api**: `Logger.Humio.Backend.IngestApi`.  Humio API endpoint to which to send the logs.  [default: `Logger.Humio.Backend.IngestApi.Unstructured`]
 * **max_batch_size**: `pos_integer`. Maximum number of logs that the library will batch before sending them to Humio.  [default: `20`]
 * **flush_interval_ms**: `pos_integer`.  Maximum number of milliseconds that ellapses between flushes to Humio. [default: `10_000`]
+* **formatter**: The formatter used to format log messages. Defaults to Elixir's `Logger.Formatter`. This library also ships with `Logger.Backend.Humio.Formatter` as an option for richer log formatting.
+* **debug_io_device**: `PID`, `:stdio`, or `:stderr`. The IO device to which error messages are sent if sending logs to Humio fails for any reason. [default: `::stdio`]
 
 ## Using it with Mix
 
@@ -52,7 +54,7 @@ Logger.configure {Logger.Backend.Humio, :debug},
 
 ```elixir
 config :logger,
-  utc_log: true #recommended, and required for correct ingestion when using the Structured Ingest API
+  utc_log: true #recommended
   backends: [{Logger.Backend.Humio, :humio_log}, :console]
 
 config :logger, :humio_log,
@@ -63,7 +65,7 @@ config :logger, :humio_log,
 #### With All Options
 ```elixir
 config :logger,
-  utc_log: true #recommended, and required for correct ingestion when using the Structured Ingest API
+  utc_log: true #recommended
   backends: [{Logger.Backend.Humio, :humio_log}, :console]
 
 config :logger, :humio_log,
@@ -75,7 +77,9 @@ config :logger, :humio_log,
   client: Logger.Backend.Humio.Client.Tesla,
   ingest_api: Logger.Backend.Humio.IngestApi.Unstructured,
   max_batch_size: 50,
-  flush_interval_ms: 5_000
+  flush_interval_ms: 5_000,
+  formatter: Logger.Backend.Humio.Formatter,
+  debug_io_device: :stderr
 ```
 
 ## Ingest APIs
@@ -111,3 +115,12 @@ The library will batch requests until either
 At this point the logger backend will send all accrued log events to Humio, and reset the flush interval timer.
 
 The logger can be flushed manually by calling `Logger.flush()`.  Note this will flush _all_ registered logger backends.
+
+## Formatters
+
+By default, the library uses Elixir's `Logger.Formatter`. As an alternative, `format: Logger.Backend.Humio.Formatter` can be set, which adds additional format options:
+* `$datetime`, which formats the time stamp as an ISO8601 timestamp.
+* `$hostname`, which prints the current hostname retrieved via `:inet.gethostname/0`.
+* `$pid`, which prints the PID of the process from which the log was sent. This works even when `:pid` is excluded from the `metadata` config.
+
+Note that the custom formatter also has a different default pattern: `$datetime $hostname[$pid]: [$level] $message $metadata`.

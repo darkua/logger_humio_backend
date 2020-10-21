@@ -1,5 +1,5 @@
 defmodule Logger.Humio.Backend.IngestApi.StructuredTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   require Logger
 
   alias Logger.Backend.Humio.IngestApi
@@ -50,7 +50,7 @@ defmodule Logger.Humio.Backend.IngestApi.StructuredTest do
 
     assert_receive({:send, %{body: body, base_url: @base_url, path: @path, headers: @headers}})
     [%{"events" => [%{"timestamp" => timestamp}]}] = Jason.decode!(body)
-    {:ok, _, 0} = DateTime.from_iso8601(timestamp)
+    {:ok, _, _} = DateTime.from_iso8601(timestamp)
   end
 
   test "Various Metadata is encoded correctly as attributes" do

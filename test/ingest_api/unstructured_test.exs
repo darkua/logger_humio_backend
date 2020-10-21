@@ -1,5 +1,5 @@
-defmodule Logger.Humio.Backend.IngestApi.UnstructuredTest do
-  use ExUnit.Case, async: true
+defmodule Logger.Backend.Humio.IngestApi.UnstructuredTest do
+  use ExUnit.Case, async: false
   require Logger
 
   alias Logger.Backend.Humio.IngestApi

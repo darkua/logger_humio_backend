@@ -4,11 +4,12 @@ defmodule Logger.Backend.Humio do
   """
   @behaviour :gen_event
 
+  alias Logger.Backend.Humio.{IngestApi, Client, TimeFormat}
+
   require Logger
 
-  @default_format "[$level] $message\n"
-  @default_ingest_api Logger.Backend.Humio.IngestApi.Unstructured
-  @default_client Logger.Backend.Humio.Client.Tesla
+  @default_ingest_api IngestApi.Unstructured
+  @default_client Client.Tesla
   @default_level :debug
   @default_metadata []
   @default_max_batch_size 20
@@ -27,10 +28,11 @@ defmodule Logger.Backend.Humio do
             token: String.t(),
             host: String.t(),
             name: any(),
-            ingest_api: Logger.Backend.Humio.IngestApi,
-            client: Logger.Backend.Humio.Client,
+            ingest_api: IngestApi,
+            client: Client,
             level: Logger.level(),
             format: any(),
+            formatter: any(),
             metadata: keyword() | :all,
             max_batch_size: pos_integer(),
             flush_interval_ms: pos_integer(),
@@ -76,10 +78,18 @@ defmodule Logger.Backend.Humio do
 
   def handle_event(
         {level, _group_leader, {Logger, msg, ts, md}},
-        %{config: %{level: min_level}} = state
+        %{config: %{level: min_level, iso8601_format_fun: iso8601_format_fun}} = state
       ) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      add_to_batch(%{level: level, message: msg, timestamp: ts, metadata: md}, state)
+      add_to_batch(
+        %{
+          level: level,
+          message: msg,
+          timestamp: ts,
+          metadata: [{:iso8601_format_fun, iso8601_format_fun} | md]
+        },
+        state
+      )
     else
       {:ok, state}
     end
@@ -180,7 +190,9 @@ defmodule Logger.Backend.Humio do
            token: token,
            client: client,
            format: format,
-           metadata: metadata
+           formatter: formatter,
+           metadata: metadata,
+           iso8601_format_fun: iso8601_format_fun
          }
        }) do
     %{
@@ -189,7 +201,9 @@ defmodule Logger.Backend.Humio do
       token: token,
       client: client,
       format: format,
-      metadata_keys: metadata
+      formatter: formatter,
+      metadata_keys: metadata,
+      iso8601_format_fun: iso8601_format_fun
     }
     |> ingest_api.transmit()
   end
@@ -215,10 +229,12 @@ defmodule Logger.Backend.Humio do
     client = Keyword.get(opts, :client, @default_client)
     level = Keyword.get(opts, :level, @default_level)
     metadata = Keyword.get(opts, :metadata, @default_metadata)
-    format = Keyword.get(opts, :format, @default_format) |> Logger.Formatter.compile()
+    formatter = Keyword.get(opts, :formatter, Logger.Formatter)
+    format = opts |> Keyword.get(:format, nil) |> formatter.compile()
     max_batch_size = Keyword.get(opts, :max_batch_size, @default_max_batch_size)
     flush_interval_ms = Keyword.get(opts, :flush_interval_ms, @default_flush_interval_ms)
     debug_io_device = Keyword.get(opts, :debug_io_device, @default_debug_io_device)
+    iso8601_format_fun = TimeFormat.iso8601_format_fun()
 
     %{
       config: %{
@@ -232,7 +248,9 @@ defmodule Logger.Backend.Humio do
         metadata: metadata,
         max_batch_size: max_batch_size,
         flush_interval_ms: flush_interval_ms,
-        debug_io_device: debug_io_device
+        debug_io_device: debug_io_device,
+        iso8601_format_fun: iso8601_format_fun,
+        formatter: formatter
       },
       log_events: [],
       flush_timer: nil

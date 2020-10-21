@@ -17,7 +17,9 @@ defmodule Logger.Backend.Humio.IngestApi do
           token: String.t(),
           client: Logger.Backend.Humio.Client,
           format: any(),
-          metadata_keys: list() | :all
+          formatter: any(),
+          metadata_keys: list() | :all,
+          iso8601_format_fun: function()
         }
   @type result :: {:ok, Client.response()} | {:error, any}
 
@@ -47,22 +49,24 @@ defmodule Logger.Backend.Humio.IngestApi do
   def format_message(
         %{message: msg, level: level, timestamp: ts, metadata: md},
         format,
+        Logger.Formatter,
         metadata_keys
       ) do
-    msg
+    format
+    |> Logger.Formatter.format(level, msg, ts, take_metadata(md, metadata_keys))
     |> IO.chardata_to_string()
-    |> String.split("\n")
-    |> filter_empty_strings
-    |> Enum.map(&format_event(level, &1, ts, md, format, metadata_keys))
-    |> Enum.join("")
+    |> String.trim()
   end
 
-  defp format_event(level, msg, ts, md, format, metadata_keys) do
-    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, metadata_keys))
-  end
-
-  defp filter_empty_strings(strings) do
-    strings
-    |> Enum.reject(&(String.trim(&1) == ""))
+  def format_message(
+        %{message: msg, level: level, timestamp: ts, metadata: md},
+        format,
+        formatter,
+        metadata_keys
+      ) do
+    formatter
+    |> apply(:format, [format, level, msg, ts, md, metadata_keys])
+    |> IO.chardata_to_string()
+    |> String.trim()
   end
 end

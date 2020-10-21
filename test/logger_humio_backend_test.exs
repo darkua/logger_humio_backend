@@ -2,7 +2,7 @@ defmodule Logger.Backend.Humio.Test do
   @moduledoc """
   Smoke tests for the backend.
   """
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   alias Logger.Backend.Humio.IngestApi
 
   require Logger

@@ -4,7 +4,7 @@ defmodule Logger.Backend.Humio.IngestApi.TestIngestApiTest do
 
   This serves mainly as an example for how to use the Test IngestAPI in other tests.
   """
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Logger.Backend.Humio.IngestApi
 

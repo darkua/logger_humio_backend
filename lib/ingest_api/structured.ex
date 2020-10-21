@@ -22,10 +22,11 @@ defmodule Logger.Backend.Humio.IngestApi.Structured do
         token: token,
         client: client,
         format: format,
+        formatter: formatter,
         metadata_keys: metadata_keys
       }) do
     headers = IngestApi.generate_headers(token, @content_type)
-    events = to_humio_events(log_events, format, metadata_keys)
+    events = to_humio_events(log_events, format, formatter, metadata_keys)
     {:ok, body} = encode_events(events)
 
     client.send(%{
@@ -44,22 +45,23 @@ defmodule Logger.Backend.Humio.IngestApi.Structured do
     ])
   end
 
-  defp to_humio_events(log_events, format, metadata_keys) do
-    log_events |> Enum.map(&to_humio_event(&1, format, metadata_keys))
+  defp to_humio_events(log_events, format, formatter, metadata_keys) do
+    log_events |> Enum.map(&to_humio_event(&1, format, formatter, metadata_keys))
   end
 
   defp to_humio_event(
          %{timestamp: timestamp, metadata: metadata} = log_event,
          format,
+         formatter,
          metadata_keys
        ) do
     # omit metadata for raw string, we add metadata as attributes instead
-    raw_string = IngestApi.format_message(log_event, format, [])
+    raw_string = IngestApi.format_message(log_event, format, formatter, [])
     attributes = metadata |> IngestApi.take_metadata(metadata_keys) |> metadata_to_map()
 
     %{
       "rawstring" => raw_string,
-      "timestamp" => format_timestamp(timestamp),
+      "timestamp" => Keyword.fetch!(metadata, :iso8601_format_fun).(timestamp),
       "attributes" => attributes
     }
   end
@@ -69,12 +71,6 @@ defmodule Logger.Backend.Humio.IngestApi.Structured do
     |> Keyword.drop(@omitted_metadata)
     |> Enum.map(fn {k, v} -> {k, metadata(k, v)} end)
     |> Enum.into(%{})
-  end
-
-  # According to https://tools.ietf.org/html/rfc5424#section-6.2.3 and ISO8601
-  defp format_timestamp({date, time}) do
-    [Logger.Formatter.format_date(date), "T", Logger.Formatter.format_time(time), "Z"]
-    |> IO.chardata_to_string()
   end
 
   defp metadata(:time, _), do: nil
