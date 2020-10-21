@@ -5,6 +5,7 @@ defmodule Logger.Backend.Humio.Formatter do
   * $hostname
   * $pid, which takes the pid from the standard metadata as a stand-alone field. Will work even if :pid is not specified in the metadata config.
   To do so, it expects the metadata keyword list to contain the key `iso8601_format_fun` whose value is a function that accepts the below `time` type as parameter and returns a String type.
+  * $application, which derives the application that submitted the log from the PID.
   """
 
   @type time :: {{1970..10_000, 1..12, 1..31}, {0..23, 0..59, 0..59, 0..999}}
@@ -19,6 +20,7 @@ defmodule Logger.Backend.Humio.Formatter do
           | :datetime
           | :hostname
           | :pid
+          | :application
   @valid_patterns [
     :time,
     :date,
@@ -29,7 +31,8 @@ defmodule Logger.Backend.Humio.Formatter do
     :levelpad,
     :datetime,
     :hostname,
-    :pid
+    :pid,
+    :application
   ]
   @default_pattern "$datetime $hostname[$pid]: [$level] $message $metadata"
   @replacement "�"
@@ -138,6 +141,14 @@ defmodule Logger.Backend.Humio.Formatter do
   end
 
   defp output(:pid, _, _, _, meta, _), do: metadata("", Keyword.fetch!(meta, :pid))
+
+  defp output(:application, _, _, _, meta, _) do
+    meta
+    |> Keyword.fetch!(:pid)
+    |> :application.get_application()
+    |> application_to_string()
+  end
+
   defp output(other, _, _, _, _, _), do: other
 
   defp levelpad(:debug), do: ""
@@ -201,5 +212,13 @@ defmodule Logger.Backend.Humio.Formatter do
       nil -> nil
       impl -> impl.to_string(other)
     end
+  end
+
+  defp application_to_string(atom) when is_atom(atom) do
+    Atom.to_string(atom)
+  end
+
+  defp application_to_string({:ok, application}) do
+    application_to_string(application)
   end
 end

@@ -1,4 +1,5 @@
 defmodule Logger.Backend.Humio.LogHelpers do
+  @moduledoc false
   @doc """
   The Logger timestamp format is weird.  This helper gets you a valid one.
   """
