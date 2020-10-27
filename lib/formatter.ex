@@ -171,7 +171,7 @@ defmodule Logger.Backend.Humio.Formatter do
   defp metadata(:report_cb, _), do: nil
 
   defp metadata(_, nil), do: nil
-  defp metadata(_, string) when is_binary(string), do: string
+  defp metadata(_, string) when is_binary(string), do: String.replace(string, "\"", "'")
   defp metadata(_, integer) when is_integer(integer), do: Integer.to_string(integer)
   defp metadata(_, float) when is_float(float), do: Float.to_string(float)
   defp metadata(_, pid) when is_pid(pid), do: :erlang.pid_to_list(pid)
